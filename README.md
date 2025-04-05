@@ -7,7 +7,7 @@ A crash may occur in the New Architecture because Codegen is including packages 
 - https://github.com/facebook/react-native/pull/42047
 - https://github.com/facebook/react-native/pull/47518
 
-Here is a [patch](https://github.com/cgoldsby/RNTV-889/edit/main/README.md#fix) that adds the Macros to the New Architecture codegen.
+Here is a [patch](https://github.com/cgoldsby/RNTV-889/README.md#fix) that adds the Macros to the New Architecture codegen.
 
 <br />
 
