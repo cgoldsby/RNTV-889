@@ -1,0 +1,91 @@
+diff --git a/node_modules/react-native/scripts/codegen/generate-artifacts-executor.js b/node_modules/react-native/scripts/codegen/generate-artifacts-executor.js
+index b62dfc9..efc813c 100644
+--- a/node_modules/react-native/scripts/codegen/generate-artifacts-executor.js
++++ b/node_modules/react-native/scripts/codegen/generate-artifacts-executor.js
+@@ -23,6 +23,9 @@ const fs = require('fs');
+ const glob = require('glob');
+ const os = require('os');
+ const path = require('path');
++const {
++  generateSupportedApplePlatformsMacro,
++} = require('@react-native/codegen/lib/generators/components/ComponentsProviderUtils');
+ 
+ const REACT_NATIVE_REPOSITORY_ROOT = path.join(
+   __dirname,
+@@ -686,7 +689,7 @@ function generateAppDependencyProvider(outputDir) {
+   codegenLog(`Generated podspec: ${finalPathPodspec}`);
+ }
+ 
+-function generateRCTThirdPartyComponents(libraries, outputDir) {
++function generateRCTThirdPartyComponents(libraries, supportedApplePlatforms, outputDir) {
+   fs.mkdirSync(outputDir, {recursive: true});
+   // Generate Header File
+   codegenLog('Generating RCTThirdPartyComponentsProvider.h');
+@@ -701,6 +704,7 @@ function generateRCTThirdPartyComponents(libraries, outputDir) {
+   codegenLog('Generating RCTThirdPartyComponentsProvider.mm');
+   let componentsInLibraries = {};
+   libraries.forEach(({config, libraryPath}) => {
++
+     if (isReactNativeCoreLibrary(config.name) || config.type === 'modules') {
+       return;
+     }
+@@ -709,7 +713,7 @@ function generateRCTThirdPartyComponents(libraries, outputDir) {
+       fs.readFileSync(path.join(libraryPath, 'package.json')),
+     ).name;
+     if (config.ios?.componentProvider) {
+-      componentsInLibraries[libraryName] = Object.keys(
++      const componentsMapping = Object.keys(
+         config.ios?.componentProvider,
+       ).map(componentName => {
+         return {
+@@ -717,6 +721,12 @@ function generateRCTThirdPartyComponents(libraries, outputDir) {
+           className: config.ios?.componentProvider[componentName],
+         };
+       });
++
++      componentsInLibraries[libraryName] = {
++        components: componentsMapping,
++        libraryName: config.name,
++      }
++
+       return;
+     }
+     codegenLog(`Crawling ${libraryName} library for components`);
+@@ -734,15 +744,18 @@ function generateRCTThirdPartyComponents(libraries, outputDir) {
+       );
+     }
+ 
+-    componentsInLibraries[libraryName] = componentsMapping;
++    componentsInLibraries[libraryName] = {
++      components: componentsMapping,
++      libraryName: config.name,
++    };
+   });
+ 
+   const thirdPartyComponentsMapping = Object.keys(componentsInLibraries)
+     .flatMap(library => {
+-      const components = componentsInLibraries[library];
+-      return components.map(({componentName, className}) => {
++      const {components, libraryName} = componentsInLibraries[library];
++      return generateSupportedApplePlatformsMacro(components.map(({componentName, className}) => {
+         return `\t\t@"${componentName}": NSClassFromString(@"${className}"), // ${library}`;
+-      });
++      }).join('\n'), supportedApplePlatforms[libraryName]);
+     })
+     .join('\n');
+   // Generate implementation file
+@@ -954,8 +967,13 @@ function execute(projectRoot, targetPlatform, baseOutputPath, source) {
+       );
+ 
+       if (source === 'app') {
++        const supportedApplePlatforms = schemaInfos.reduce((acc, { library, supportedApplePlatforms }) => {
++          acc[library.config.name] = supportedApplePlatforms;
++          return acc;
++        }, {});
++
+         // These components are only required by apps, not by libraries
+-        generateRCTThirdPartyComponents(libraries, outputPath);
++        generateRCTThirdPartyComponents(libraries, supportedApplePlatforms, outputPath);
+         generateCustomURLHandlers(libraries, outputPath);
+         generateAppDependencyProvider(outputPath);
+       }
