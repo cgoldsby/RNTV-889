@@ -19,7 +19,7 @@ yarn ios --simulator "Apple TV"
 ![Apple TV crash](screenshots/tvos-new.png)
 
 ##### Fix:
-After reproducing the crash, apply patch to fix:
+After reproducing the crash, apply the [patch](https://github.com/cgoldsby/RNTV-889/tree/main/patches) to fix:
 ```shell
 git apply patches/react-native+0.77.2-0.patch
 ```
